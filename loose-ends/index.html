@@ -1,0 +1,544 @@
+<title>Loose Ends</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Courier+Prime:wght@400;700&family=Big+Shoulders+Display:wght@600;800&display=swap">
+<style>
+  /* Layout: a lamp-lit corkboard at 2 a.m. HUD strip on top, 8 pinned index-card slots, a narrator ticker underneath. */
+  :root {
+    --night: #121827;
+    --night-2: #1b2338;
+    --cork: #5e4a39;
+    --cork-dot: #4e3c2e;
+    --paper: #ebe7de;
+    --ink: #22252e;
+    --string: #d8453b;
+    --lamp: #f2b544;
+    --cold: #6ea6d8;
+    --fg: #e9e4d8;
+    --muted: #9aa3b8;
+    --font-hand: "Permanent Marker", "Comic Sans MS", cursive;
+    --font-type: "Courier Prime", "Courier New", ui-monospace, monospace;
+    --font-num: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+    color-scheme: dark;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(ellipse 70% 55% at 50% 0%, color-mix(in oklab, var(--lamp) 16%, transparent), transparent 70%),
+      var(--night);
+    color: var(--fg);
+    font-family: var(--font-type);
+    padding-inline: 16px;
+    padding-block: 16px 24px;
+    box-sizing: border-box;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 14px; }
+
+  header.hud {
+    display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px;
+  }
+  .brand { font-family: var(--font-hand); font-size: clamp(28px, 5vw, 40px); line-height: 1; color: var(--paper); margin: 0; }
+  .brand span { color: var(--string); }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: end; }
+  .stat { display: grid; gap: 2px; }
+  .stat .lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .stat .val { font-family: var(--font-num); font-weight: 800; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .patience { display: flex; gap: 6px; height: 30px; align-items: center; }
+  .patience i { width: 16px; height: 16px; border-radius: 50%; background: var(--string); box-shadow: 0 0 10px color-mix(in oklab, var(--string) 60%, transparent); transition: background .3s, box-shadow .3s; }
+  .patience i.gone { background: transparent; box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--string) 45%, transparent); }
+  .flow { color: var(--lamp); }
+  .flow.off { color: var(--muted); }
+
+  .board {
+    position: relative;
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;
+    padding: 20px;
+    border-radius: 6px;
+    background:
+      radial-gradient(circle at 20% 30%, var(--cork-dot) 1.2px, transparent 1.6px) 0 0 / 11px 13px,
+      radial-gradient(circle at 70% 60%, var(--cork-dot) 1px, transparent 1.5px) 0 0 / 7px 9px,
+      var(--cork);
+    box-shadow: inset 0 0 0 6px #3b2d22, inset 0 0 60px rgba(0,0,0,.45), 0 20px 50px rgba(0,0,0,.4);
+    min-height: 340px;
+  }
+  @media (max-width: 640px) {
+    .board { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 14px; }
+  }
+  .slot {
+    min-height: 150px; border-radius: 3px;
+    border: 2px dashed color-mix(in oklab, var(--paper) 14%, transparent);
+    display: grid; place-items: center;
+    color: color-mix(in oklab, var(--paper) 25%, transparent);
+    font-size: 12px; letter-spacing: .1em;
+  }
+  .card {
+    all: unset; box-sizing: border-box; cursor: pointer;
+    width: 100%; min-height: 150px; position: relative;
+    display: grid; grid-template-rows: auto 1fr auto; gap: 8px;
+    padding: 18px 12px 12px;
+    background:
+      repeating-linear-gradient(to bottom, transparent 0 21px, color-mix(in oklab, var(--cold) 22%, transparent) 21px 22px) 0 30px / 100% calc(100% - 30px) no-repeat,
+      var(--paper);
+    color: var(--ink);
+    border-radius: 2px;
+    box-shadow: 0 6px 14px rgba(0,0,0,.35);
+    transform: rotate(var(--rot, 0deg));
+    transition: transform .15s ease, box-shadow .15s ease, opacity .4s ease;
+    animation: pin-in .35s ease-out;
+  }
+  .card::before { /* push pin */
+    content: ""; position: absolute; top: 6px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #ff8a80, var(--string) 60%, #7c1d17);
+    box-shadow: 0 2px 3px rgba(0,0,0,.4);
+  }
+  .card:hover { transform: rotate(0deg) translateY(-2px); }
+  .card:focus-visible { outline: 3px solid var(--lamp); outline-offset: 3px; }
+  .card.active {
+    transform: rotate(0deg) scale(1.03);
+    box-shadow: 0 0 0 3px var(--lamp), 0 0 28px color-mix(in oklab, var(--lamp) 55%, transparent), 0 10px 20px rgba(0,0,0,.4);
+  }
+  .card.cold { animation: shiver .25s linear infinite; }
+  .card.done, .card.dropped { pointer-events: none; }
+  .card.done { opacity: 0; transform: scale(1.1) rotate(0deg); transition-duration: .6s; }
+  .card.dropped { opacity: 0; transform: translateY(40px) rotate(18deg); transition-duration: .7s; }
+  .card .key { position: absolute; top: 4px; right: 7px; font-size: 11px; color: color-mix(in oklab, var(--ink) 45%, transparent); }
+  .card .title { font-family: var(--font-hand); font-size: 16px; line-height: 1.2; text-wrap: balance; }
+  .card .meta { display: grid; gap: 5px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+  .bar { height: 6px; background: color-mix(in oklab, var(--ink) 12%, transparent); border-radius: 3px; overflow: hidden; }
+  .bar > b { display: block; height: 100%; width: 0; border-radius: 3px; }
+  .bar.draft > b { background: var(--ink); }
+  .bar.heat > b { background: color-mix(in oklab, var(--lamp) calc(var(--h, 1) * 100%), var(--cold)); }
+  .stamp {
+    position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+    font-family: var(--font-num); font-weight: 800; font-size: 26px; letter-spacing: .06em; transform: rotate(-12deg);
+  }
+  .stamp.win { color: #2f7d4a; }
+  .stamp.lose { color: var(--string); }
+
+  .shiny {
+    all: unset; cursor: pointer; position: absolute; z-index: 5;
+    padding: 8px 14px; border-radius: 999px;
+    font-family: var(--font-hand); font-size: 15px; color: var(--ink);
+    background: var(--lamp);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--lamp) 35%, transparent), 0 0 30px var(--lamp);
+    animation: bob 1s ease-in-out infinite alternate;
+  }
+  .shiny:focus-visible { outline: 3px solid var(--paper); outline-offset: 3px; }
+
+  .ticker {
+    min-height: 3em; font-size: 15px; line-height: 1.5; color: var(--fg);
+    border-left: 3px solid var(--string); padding-left: 12px; max-width: 70ch;
+  }
+  .ticker.fresh { animation: type-in .4s ease-out; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .hint kbd { font-family: var(--font-type); border: 1px solid color-mix(in oklab, var(--muted) 50%, transparent); border-radius: 3px; padding: 0 4px; }
+
+  .overlay {
+    position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; overflow-y: auto;
+    padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px));
+    background: color-mix(in oklab, var(--night) 82%, transparent);
+    backdrop-filter: blur(3px);
+  }
+  .sheet {
+    width: min(560px, 100%); box-sizing: border-box;
+    background: var(--paper); color: var(--ink);
+    padding: 28px clamp(18px, 5vw, 36px); border-radius: 3px;
+    box-shadow: 0 30px 60px rgba(0,0,0,.5);
+    display: grid; gap: 14px;
+    transform: rotate(-.6deg);
+  }
+  .sheet h2 { margin: 0; font-family: var(--font-hand); font-size: clamp(30px, 7vw, 42px); line-height: 1.05; font-weight: 400; text-wrap: balance; }
+  .sheet p { margin: 0; line-height: 1.55; }
+  .sheet ul { margin: 0; padding-left: 1.2em; line-height: 1.55; display: grid; gap: 4px; }
+  .sheet .small { font-size: 13px; color: color-mix(in oklab, var(--ink) 70%, transparent); }
+  .sheet .eyebrow { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--string); font-weight: 700; }
+  .sheet .big { font-family: var(--font-num); font-weight: 800; font-size: 48px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .sheet blockquote { margin: 0; padding-left: 12px; border-left: 3px solid var(--string); font-style: italic; }
+  .go {
+    all: unset; cursor: pointer; justify-self: start;
+    font-family: var(--font-num); font-weight: 800; font-size: 22px; letter-spacing: .08em; text-transform: uppercase;
+    padding: 10px 22px; background: var(--ink); color: var(--paper); border-radius: 3px;
+  }
+  .go:hover { background: var(--string); }
+  .go:focus-visible { outline: 3px solid var(--string); outline-offset: 3px; }
+
+  @keyframes pin-in { from { transform: translateY(-14px) rotate(var(--rot, 0deg)); opacity: 0; } }
+  @keyframes shiver { 0%,100% { transform: rotate(var(--rot)) translateX(0); } 50% { transform: rotate(var(--rot)) translateX(1.5px); } }
+  @keyframes bob { to { transform: translateY(-6px); } }
+  @keyframes type-in { from { opacity: 0; transform: translateX(-6px); } }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before { animation: none !important; transition-duration: .01s !important; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="hud">
+    <h1 class="brand">Loose <span>Ends</span></h1>
+    <div class="stats">
+      <div class="stat"><span class="lbl">Words</span><span class="val" id="words">0</span></div>
+      <div class="stat"><span class="lbl">Streak</span><span class="val" id="combo">×1.0</span></div>
+      <div class="stat"><span class="lbl">Flow</span><span class="val flow off" id="flow">—</span></div>
+      <div class="stat"><span class="lbl">Editor's patience</span><span class="patience" id="patience"><i></i><i></i><i></i></span></div>
+    </div>
+  </header>
+
+  <main class="board" id="board" aria-label="Corkboard of plot threads"></main>
+
+  <p class="ticker" id="ticker" aria-live="polite">It's 2:14 a.m. The manuscript is due Friday. The threads are breeding.</p>
+  <p class="hint">Tap a card (or press <kbd>1</kbd>–<kbd>8</kbd>) to write that thread. You can only write one at a time. Everything else goes cold.</p>
+</div>
+
+<div class="overlay" id="intro">
+  <div class="sheet">
+    <span class="eyebrow">A game about finishing things</span>
+    <h2>Every thread you start is a promise to the reader.</h2>
+    <p>Plot threads get pinned to your board. Tap one to write it. Its draft fills up, and when it hits 100% it's tied off and banked as words.</p>
+    <p>Every thread you're <em>not</em> writing cools down. Let one go fully cold and it becomes a plot hole. Three plot holes and your editor reads the draft.</p>
+    <p>Sometimes a <b>shiny new idea</b> floats past. Grabbing it puts you in flow and doubles your writing speed. It also pins a brand-new thread to the board, because of course it does.</p>
+    <button class="go" id="start">Start writing</button>
+    <span class="small" id="best"></span>
+  </div>
+</div>
+
+<div class="overlay" id="end" hidden>
+  <div class="sheet">
+    <span class="eyebrow">Your editor has read the draft</span>
+    <h2 id="end-title">Back cover</h2>
+    <p id="blurb"></p>
+    <blockquote id="review"></blockquote>
+    <div>
+      <div class="small">Words written</div>
+      <div class="big" id="end-words">0</div>
+      <div class="small" id="end-rank"></div>
+    </div>
+    <div id="sequel-wrap">
+      <div class="eyebrow">Threads the sequel will definitely address</div>
+      <ul id="sequel"></ul>
+    </div>
+    <button class="go" id="again">Write another one</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  const SLOTS = 8;
+
+  const WHO = ["The butler", "Aunt Margo", "The lighthouse keeper", "A disgraced duke", "The talking crow",
+    "Detective Vance", "The twins", "Your villain", "The cursed violinist", "The baker's ghost",
+    "Captain Hollow", "The intern", "The narrator's ex", "A very old dog", "The mayor", "Sister Perpetua",
+    "The mapmaker", "Your protagonist's mom", "The bard", "Someone named Gerald"];
+  const WHAT = ["is secretly three raccoons in a coat", "owes a witch forty goats", "hasn't blinked since chapter two",
+    "knows where the body is", "is in love with the antagonist's accountant", "keeps writing letters to the moon",
+    "stole the wrong crown", "has been holding the same teacup for 47 pages", "swore a blood oath over brunch",
+    "forgot which timeline they're in", "might be the narrator", "inherited a haunted spreadsheet",
+    "has a twin nobody mentioned", "was dead in chapter four and is now at the wedding", "is planning a heist with a goose",
+    "keeps saying 'you'll see' and never explains", "started a cult by accident", "is allergic to prophecy",
+    "left a gun on the mantelpiece", "knows the dragon personally", "has one (1) secret door", "is running from a pun"];
+
+  const LINES = {
+    resolve: ["Tied off. Chekhov nods approvingly from beyond the grave.",
+      "Resolved. Your editor sheds one single tear of relief.",
+      "Done. That thread will never haunt you again. Probably.",
+      "Payoff landed. Somewhere a reader gasps into their tea.",
+      "Finished. You're allowed exactly one smug sip of coffee.",
+      "Closed out. Foreshadowing was absolutely intentional, yes."],
+    drop: ["“{t}” went cold. A reader somewhere just noticed.",
+      "Snip. “{t}” is a plot hole now. Reddit will find it.",
+      "“{t}” wandered off the page and nobody followed.",
+      "Dropped: “{t}”. Your editor makes a small, sad noise."],
+    spawn: ["A new thread just walked in without knocking.",
+      "Oh no. You had another idea.",
+      "Your brain, uninvited, adds a subplot.",
+      "New thread pinned. It is looking at you."],
+    shiny: ["You chased the shiny thing. Words are pouring out. Also there's a new thread. Of course there is.",
+      "Flow state engaged. The keyboard is on fire. So is the thread count."],
+    missShiny: ["The shiny idea wandered off to bother some other writer.",
+      "You let the shiny one go. Growth? Growth."],
+    switch: ["Wait, weren't you just writing something else?",
+      "Tab-hopping again, I see.",
+      "Bold of you to abandon a thread mid-sentence."]
+  };
+
+  const REVIEWS = ["“I have questions, and I expect them answered in book two.” — Someone's Aunt",
+    "“Unhinged. Five stars.” — The Midnight Review",
+    "“The raccoon subplot changed me.” — A Bookstagrammer",
+    "“Who approved this?” — Your Editor, lovingly",
+    "“I read it in one sitting and then had to lie down.” — Local Man",
+    "“Somehow both a mystery and a cry for help.” — The Quarterly Shrug"];
+
+  const RANKS = [[0, "Napkin Poet"], [2500, "Fanfic Menace"], [6000, "Midlist Survivor"],
+    [11000, "Airport Bestseller"], [18000, "Book Tour Menace"], [28000, "Literary Deity"]];
+
+  let S, board, slots;
+
+  function fresh() {
+    return { running: false, paused: false, threads: [], active: null, patience: 3, words: 0, combo: 0, t: 0,
+      nextSpawn: 0.4, flowUntil: 0, shiny: null, nextShiny: 14, resolved: [], dropped: [], last: 0, id: 0, lastActive: null };
+  }
+
+  function say(text) {
+    const el = $("#ticker");
+    el.textContent = text;
+    el.classList.remove("fresh"); void el.offsetWidth; el.classList.add("fresh");
+  }
+
+  function buildBoard() {
+    board = $("#board");
+    board.innerHTML = "";
+    slots = [];
+    for (let i = 0; i < SLOTS; i++) {
+      const s = document.createElement("div");
+      s.className = "slot";
+      s.textContent = "empty";
+      board.appendChild(s);
+      slots.push({ el: s, thread: null });
+    }
+  }
+
+  function newTitle() {
+    const taken = new Set(S.threads.map((t) => t.who));
+    let who, n = 0;
+    do { who = pick(WHO); } while (taken.has(who) && n++ < 30);
+    return { who, title: who + " " + pick(WHAT) };
+  }
+
+  function spawn() {
+    const free = slots.findIndex((s) => !s.thread);
+    if (free < 0) return false;
+    const { who, title } = newTitle();
+    const th = { id: ++S.id, who, title, progress: 0, heat: 80 + Math.random() * 20, slot: free, done: false };
+    const btn = document.createElement("button");
+    btn.className = "card";
+    btn.style.setProperty("--rot", (Math.random() * 5 - 2.5).toFixed(2) + "deg");
+    btn.innerHTML = `<span class="key">${free + 1}</span><span class="title"></span>
+      <span class="meta"><span>Draft</span><span class="bar draft"><b></b></span>
+      <span>Warmth</span><span class="bar heat"><b></b></span></span>`;
+    btn.querySelector(".title").textContent = title;
+    btn.setAttribute("aria-label", "Write thread: " + title);
+    btn.addEventListener("click", () => focusThread(th));
+    th.el = btn;
+    th.draftBar = btn.querySelector(".bar.draft > b");
+    th.heatBar = btn.querySelector(".bar.heat > b");
+    slots[free].el.replaceWith(btn);
+    slots[free].el = btn;
+    slots[free].thread = th;
+    S.threads.push(th);
+    return true;
+  }
+
+  function clearSlot(th) {
+    const s = document.createElement("div");
+    s.className = "slot";
+    s.textContent = "empty";
+    const slot = slots[th.slot];
+    if (slot.el.isConnected) slot.el.replaceWith(s);
+    slot.el = s;
+    slot.thread = null;
+  }
+
+  function focusThread(th) {
+    if (!S.running || th.done) return;
+    if (S.active && S.active !== th && S.active.progress > 20 && Math.random() < 0.3) say(pick(LINES.switch));
+    S.active = th;
+  }
+
+  function stamp(th, text, cls) {
+    const st = document.createElement("span");
+    st.className = "stamp " + cls;
+    st.textContent = text;
+    th.el.appendChild(st);
+  }
+
+  function resolve(th) {
+    th.done = true;
+    const flowing = S.t < S.flowUntil;
+    const gain = Math.round((200 + th.heat * 3) * (1 + S.combo * 0.25) * (flowing ? 1.5 : 1));
+    S.words += gain;
+    S.combo = Math.min(S.combo + 1, 8);
+    S.resolved.push(th.title);
+    stamp(th, "TIED OFF +" + gain, "win");
+    say(pick(LINES.resolve));
+    if (S.active === th) S.active = null;
+    retire(th, "done");
+  }
+
+  function drop(th) {
+    th.done = true;
+    S.patience--;
+    S.combo = 0;
+    S.dropped.push(th.title);
+    stamp(th, "PLOT HOLE", "lose");
+    say(pick(LINES.drop).replace("{t}", th.title));
+    if (S.active === th) S.active = null;
+    retire(th, "dropped");
+    if (S.patience <= 0) setTimeout(endGame, 700);
+  }
+
+  function retire(th, cls) {
+    th.el.classList.remove("active", "cold");
+    setTimeout(() => th.el.classList.add(cls), 450);
+    setTimeout(() => {
+      S.threads = S.threads.filter((x) => x !== th);
+      clearSlot(th);
+    }, 1150);
+  }
+
+  function showShiny() {
+    const b = document.createElement("button");
+    b.className = "shiny";
+    b.textContent = "✦ shiny new idea";
+    b.style.left = (5 + Math.random() * 60) + "%";
+    b.style.top = (8 + Math.random() * 75) + "%";
+    b.addEventListener("click", () => {
+      if (!S.shiny) return;
+      S.flowUntil = S.t + 8;
+      S.words += 150;
+      spawn();
+      say(pick(LINES.shiny));
+      killShiny();
+    });
+    board.appendChild(b);
+    S.shiny = { el: b, expires: S.t + 4.5 };
+  }
+
+  function killShiny() {
+    if (S.shiny) S.shiny.el.remove();
+    S.shiny = null;
+  }
+
+  function update(dt) {
+    S.t += dt;
+    const flowing = S.t < S.flowUntil;
+    const decay = Math.min(3.2 + S.t / 22, 10);
+    const rate = 17 * (flowing ? 2 : 1);
+
+    for (const th of S.threads) {
+      if (th.done) continue;
+      if (th === S.active) {
+        th.progress += rate * dt;
+        th.heat = Math.min(100, th.heat + 30 * dt);
+        if (th.progress >= 100) { th.progress = 100; resolve(th); }
+      } else {
+        th.heat -= decay * dt;
+        if (th.heat <= 0) { th.heat = 0; drop(th); }
+      }
+    }
+
+    const live = S.threads.filter((t) => !t.done).length;
+    if (live === 0 && S.nextSpawn > 0.8) S.nextSpawn = 0.8;
+    S.nextSpawn -= dt;
+    if (S.nextSpawn <= 0) {
+      if (spawn() && S.t > 6 && Math.random() < 0.25) say(pick(LINES.spawn));
+      S.nextSpawn = Math.max(2.6, 7 - S.t / 18) * (0.8 + Math.random() * 0.4);
+    }
+
+    if (S.shiny && S.t > S.shiny.expires) { killShiny(); say(pick(LINES.missShiny)); }
+    S.nextShiny -= dt;
+    if (S.nextShiny <= 0 && !S.shiny) { showShiny(); S.nextShiny = 14 + Math.random() * 10; }
+  }
+
+  function render() {
+    for (const th of S.threads) {
+      if (th.done) continue;
+      th.el.classList.toggle("active", th === S.active);
+      th.el.classList.toggle("cold", th.heat < 28 && th !== S.active);
+      th.draftBar.style.width = th.progress.toFixed(1) + "%";
+      th.heatBar.style.width = th.heat.toFixed(1) + "%";
+      th.heatBar.style.setProperty("--h", (th.heat / 100).toFixed(3));
+    }
+    $("#words").textContent = S.words.toLocaleString();
+    $("#combo").textContent = "×" + (1 + S.combo * 0.25).toFixed(2).replace(/0$/, "");
+    const f = $("#flow");
+    const left = S.flowUntil - S.t;
+    f.textContent = left > 0 ? left.toFixed(1) + "s" : "—";
+    f.classList.toggle("off", left <= 0);
+    [...$("#patience").children].forEach((d, i) => d.classList.toggle("gone", i >= S.patience));
+  }
+
+  function loop(ts) {
+    if (!S.running) return;
+    if (!S.last) S.last = ts;
+    const dt = Math.min(0.1, (ts - S.last) / 1000);
+    S.last = ts;
+    if (!S.paused) { update(dt); render(); }
+    if (S.running) requestAnimationFrame(loop);
+  }
+
+  function readBest() { try { return +localStorage.getItem("loose-ends-best") || 0; } catch { return 0; } }
+  function writeBest(v) { try { localStorage.setItem("loose-ends-best", String(v)); } catch {} }
+  function showBest() {
+    const b = readBest();
+    $("#best").textContent = b ? "Your best draft so far: " + b.toLocaleString() + " words." : "";
+  }
+
+  function start() {
+    S = fresh();
+    buildBoard();
+    killShiny();
+    $("#intro").hidden = true;
+    $("#end").hidden = true;
+    say("It's 2:14 a.m. The manuscript is due Friday. The threads are breeding.");
+    S.running = true;
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function lower(s) { return s.charAt(0).toLowerCase() + s.slice(1); }
+
+  function endGame() {
+    if (!S.running) return;
+    S.running = false;
+    killShiny();
+    const r = S.resolved.slice(-3).map(lower);
+    let blurb;
+    if (r.length === 0) blurb = "A bold, experimental novel made entirely of loose ends. Nothing is explained. Nothing is forgiven.";
+    else if (r.length === 1) blurb = `A tight, focused novel about one thing and one thing only: ${r[0]}. Everything else is a vibe.`;
+    else if (r.length === 2) blurb = `A sweeping tale in which ${r[0]}, while ${r[1]}. Nobody is okay.`;
+    else blurb = `A sprawling saga in which ${r[0]}, ${r[1]}, and, against all odds, ${r[2]}.`;
+    $("#blurb").textContent = blurb;
+    $("#review").textContent = pick(REVIEWS);
+    $("#end-words").textContent = S.words.toLocaleString();
+    const rank = RANKS.filter(([min]) => S.words >= min).pop()[1];
+    const best = readBest();
+    const isBest = S.words > best;
+    if (isBest) writeBest(S.words);
+    $("#end-rank").textContent = `Rank: ${rank} · ${S.resolved.length} tied off · ${S.dropped.length} dropped` + (isBest && best ? " · new personal best" : "");
+    $("#end-title").textContent = pick(["The Unfinished Business", "Chapter Eleven Is Missing", "A Novel (Allegedly)", "Everything Is Foreshadowing", "The Goose Knows"]);
+    const seq = $("#sequel");
+    seq.innerHTML = "";
+    S.dropped.slice(0, 4).forEach((t) => { const li = document.createElement("li"); li.textContent = t; seq.appendChild(li); });
+    $("#sequel-wrap").hidden = S.dropped.length === 0;
+    $("#end").hidden = false;
+    $("#again").focus();
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (!S || !S.running) return;
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= SLOTS) {
+      const th = slots[n - 1].thread;
+      if (th) focusThread(th);
+    }
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (!S) return;
+    S.paused = document.hidden;
+    S.last = 0;
+  });
+
+  $("#start").addEventListener("click", start);
+  $("#again").addEventListener("click", start);
+
+  // Resting state behind the intro: a board with a few example threads pinned.
+  S = fresh();
+  buildBoard();
+  for (let i = 0; i < 4; i++) spawn();
+  S.threads.forEach((t, i) => { t.progress = [35, 70, 10, 50][i]; t.heat = [90, 40, 20, 65][i]; });
+  S.active = S.threads[1];
+  render();
+  showBest();
+})();
+</script>
